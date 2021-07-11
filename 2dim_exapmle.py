@@ -11,10 +11,6 @@ from GPR import GaussianProcess
 
 # %%
 # create data
-def func1d(x):
-    return np.sin(2.0 * np.pi * 0.2 * x) + np.sin(2.0 * np.pi * 0.05 * x)
-
-
 df = pd.read_csv("./advertising.csv")
 x = df[["TV", "Radio"]].values
 y = df["Sales"].values

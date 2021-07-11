@@ -47,25 +47,6 @@ class GaussianProcess:
         var = np.diag(all_var)
         return mu, var
 
-    # def prediction__(self, x):
-    #     mu = []
-    #     var = []
-    #     if self.dim == 2:
-    #         x_shape = x[np.newaxis, :, :]
-    #     else:
-    #         x_shape = x
-
-    #     for _x in x_shape:
-    #         self.Cn = self.create_kernel_mtx(self.x_train, self.x_train)
-    #         self.Cn_inv = np.linalg.inv(self.Cn)
-    #         k = self.create_kernel_mtx(self.x_train, _x)
-    #         c = self.create_kernel_mtx(_x, _x)
-    #         _mu = k.T @ self.Cn_inv @ self.y_train
-    #         _var = c - (k.T @ self.Cn_inv @ k)
-    #         mu.append(_mu)
-    #         var.append(_var)
-    #     return np.array(mu), np.array(var)
-
     def set_training_data(self, x_train, y_train):
         self.x_train = x_train
         self.y_train = y_train
