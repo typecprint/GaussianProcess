@@ -9,6 +9,8 @@ A Python implementation of Gaussian process regression.
 - Supporting multi-dimensional Gaussian process regression.
 - Kernel function is a Gaussian kernel with a constant term and a linear term.
 
+This implementation is for personal study and has not yet been tested for faster computation or detailed accuracy, but I have confirmed that the results are qualitatively similar to the Gpy library.
+
 # Example
 
 ## 1 dimension data
