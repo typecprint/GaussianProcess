@@ -23,7 +23,7 @@ class GaussianProcess:
             [self.kernel(_x1, _x2, np.all(_x1 == _x2)) for _x1 in x1_ for _x2 in x2_]
         )
         K = K.reshape(x1_.shape[0], x2_.shape[0])
-        return np.squeeze(K)
+        return K
 
     def gp_sampling(self, x):
         K = self.create_kernel_mtx(x, x)
