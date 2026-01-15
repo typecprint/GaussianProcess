@@ -1,50 +1,157 @@
-# Gaussian Process
+# Gaussian Process Regression
 
-# Description
+![Animation of 1D Gaussian Process Regression](./image/1d_gpr_comparison.gif)
 
-![gif](./image/animation.gif)
+This repository provides a Python implementation of Gaussian Process Regression (GPR). It includes two versions: a standard implementation that is easy to understand and follows the textbook equations, and a computationally efficient version optimized for speed and numerical stability.
 
-A Python implementation of Gaussian process regression.
+This project was created for educational purposes to deepen the understanding of Gaussian Processes.
 
-- Supporting multi-dimensional Gaussian process regression.
-- Kernel function is a Gaussian kernel with a constant term and a linear term.
+## Features
 
-This implementation is for personal study and has not yet been tested for faster computation or detailed accuracy, but I have confirmed that the results are qualitatively similar to the Gpy library.
+- **Two Implementations**: Choose between a clear, educational implementation (`GPR.py`) and a high-performance one (`GPR_efficient.py`).
+- **Multi-dimensional Support**: Capable of handling multi-dimensional input data.
+- **Flexible Kernels**: A composite kernel including an RBF (Gaussian), constant, and linear term. The efficient version supports Automatic Relevance Determination (ARD).
+- **Hyperparameter Optimization**: Built-in optimization of kernel hyperparameters using `scipy.optimize`.
 
-# Example
+## Implementations
 
-## 1 dimension data
+### `GPR.py`: Standard Version
 
-### Input Data
+This version is a direct translation of the mathematical formulas for GPR. It is easy to follow for those learning the theory but may be slow for larger datasets due to its use of loops for matrix construction.
 
-Let's create a simple sine curve with some noise on it and perform a Gaussian process regression.
+### `GPR_efficient.py`: Efficient Version
 
-![input](./image/1d-raw-data.png)
+This version is optimized for performance and numerical stability:
 
-### Regression Result
+- **Vectorized Operations**: Uses NumPy's vectorized operations to build kernel matrices quickly.
+- **Cholesky Decomposition**: Employs Cholesky decomposition (`scipy.linalg.cho_factor`) for solving linear systems, which is faster and more stable than direct matrix inversion.
+- **ARD Kernel**: Supports Automatic Relevance Determination, allowing for different length-scales for each input dimension.
 
-This is the result of fixing the kernel function with arbitrary parameters and performing a Gaussian process regression. The red dots represent the observed points, the green color is GroundTruth, the dark blue line is the mean of the regression, and the light blue color is plus or minus 1 sigma.
+## Performance Comparison
 
-![result](./image/1d-gpr.png)
+To demonstrate the performance difference between the standard and efficient implementations, the execution time for both 1D and 2D regression tasks was measured. As shown in the plots below, the efficient version (`GPR_efficient.py`) is significantly faster, especially as the number of data points increases.
 
-### Regression Result(Using Optimized Parameters.)
+**1D Regression**
+![Execution Time Comparison](./image/1d-execution-time.png)
 
-After hyperparameter optimization, the graph looks like this. This result is consistent with the Gpy library, confirming that my implementation is correct.
+**2D Regression**
+![Execution Time Comparison](./image/2d-execution-time.png)
 
-![result_opt](./image/1d-gpr-optimize.png)
+This performance gain is achieved through vectorized operations and the use of Cholesky decomposition, making the efficient version more suitable for larger datasets.
 
-## 2 dimension data
+## How to Use
 
-Here we use the famous advertising dataset as an example.
+This section demonstrates how to use the GPR implementations for both 1D and 2D regression tasks.
 
-### Input Data
+### 1D Regression Example
 
-It can be used for two-dimensional data in exactly the same way. The blue points are the observed points and the red points are the unobserved test data.
+Here is a simple example of performing a 1D regression.
 
-![input](./image/2d-raw-data_1.png)
+#### 1. Generate Sample Data
 
-### Regression Result
+First, let's create a simple sine curve with some noise.
 
-If we draw a regression plane, it will look like the following
+```python
+import numpy as np
+import matplotlib.pyplot as plt
 
-![result](./image/2d-gpr-1.png)
+# Generate sample data
+x_train = np.linspace(-5, 5, 20).reshape(-1, 1)
+y_train = np.sin(x_train).ravel() + np.random.normal(0, 0.1, x_train.shape[0])
+x_test = np.linspace(-5, 5, 100).reshape(-1, 1)
+
+# Plot the raw data
+plt.figure(figsize=(8, 6))
+plt.scatter(x_train, y_train, c='red', label='Observed Data')
+plt.title('Input Data')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+plt.show()
+```
+
+![Input Data](./image/1d-raw-data.png)
+
+#### 2. Perform Regression
+
+You can choose either `GaussianProcess` or `GaussianProcessEfficient`.
+
+##### Using the Standard `GaussianProcess`
+
+```python
+from GPR import GaussianProcess
+
+# Initial hyperparameters
+# [sigma_f^2, length_scale, bias, linear_slope]
+theta = np.array([1.0, 1.0, 1.0, 1.0])
+beta = 50.0 # Noise precision
+
+# Create and train the model
+gp = GaussianProcess(theta, beta, x_train, y_train)
+gp.optimize() # Optimize hyperparameters
+
+# Make predictions
+mu, var = gp.prediction(x_test)
+std = np.sqrt(var)
+
+# Plot the results
+plt.figure(figsize=(10, 8))
+plt.scatter(x_train, y_train, c='red', label='Observed Data')
+plt.plot(x_test, np.sin(x_test), 'g--', label='Ground Truth')
+plt.plot(x_test, mu, 'b-', label='Predictive Mean')
+plt.fill_between(x_test.ravel(), mu - std, mu + std, alpha=0.2, color='blue', label='±1 sigma')
+plt.title('GPR with Optimized Parameters (Standard)')
+plt.legend()
+plt.show()
+```
+
+![Optimized GPR Result](./image/1d-gpr-optimize.png)
+
+##### Using the `GaussianProcessEfficient`
+
+The efficient implementation uses an ARD kernel, so the number of length-scale parameters in `theta` depends on the input dimension.
+
+```python
+from GPR_efficient import GaussianProcessEfficient
+
+# For 1D data, theta is [rbf_var, length_scale, const_var, linear_var]
+theta = np.array([1.0, 1.0, 1.0, 1.0])
+beta = 50.0
+
+gp_efficient = GaussianProcessEfficient(theta, beta, x_train, y_train)
+gp_efficient.optimize()
+
+mu_eff, var_eff = gp_efficient.prediction(x_test)
+std_eff = np.sqrt(var_eff)
+
+# The plot will be visually identical to the one above
+```
+
+![Optimized GPR efficient Result](./image/1d-gpr-efficient-optimize.png)
+
+### 2D Regression Example
+
+This implementation also supports multi-dimensional regression. Here is an example of performing a 2D regression on the "advertising" dataset, which contains the impact of TV and Radio advertising budgets on sales.
+
+First, we load the data and visualize it. The goal is to predict `Sales` based on `TV` and `Radio` budgets.
+
+![2D Raw Data](./image/2d-raw-data_1.png)
+
+After training the `GaussianProcessEfficient` model, we can predict `Sales` for a range of `TV` and `Radio` budgets and visualize the result as a 3D surface.
+
+![2D GPR Result](./image/2d-gpr.png)
+
+The ARD kernel in the efficient implementation helps to identify the relevance of each input feature. For more details, please refer to the `2dim_gpr_comparison.ipynb` notebook.
+
+## Examples
+
+This repository contains more detailed examples:
+
+- `1dim_gif.ipynb`: A complete 1D regression example, including hyperparameter optimization and plotting.
+- `2dim_gpr_comparison.ipynb`: An example of 2D regression using the "advertising" dataset.
+
+You can open these notebooks with Jupyter Notebook or JupyterLab to see the Gaussian Process regression in action.
+
+## License
+
+This project is open-source. Please feel free to use it for your own studies.

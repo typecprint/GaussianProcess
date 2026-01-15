@@ -3,6 +3,15 @@ from scipy.optimize import minimize
 
 
 class GaussianProcess:
+    """
+    A standard Gaussian Process Regression implementation faithful to mathematical formulas.
+
+    Attributes:
+        theta (ndarray): Hyperparameters for the kernel [sigma_f^2, length_scale, bias, linear_slope].
+        beta (float): Precision of the observation noise (1 / sigma_n^2).
+        x_train, y_train (ndarray): Training data.
+    """
+
     def __init__(self, theta, beta, x_train=None, y_train=None, param_bound=None):
         self.theta = theta
         self.beta = beta
@@ -17,6 +26,7 @@ class GaussianProcess:
         self.kernel = self.__gaussian_kernel
 
     def create_kernel_mtx(self, x1, x2):
+        """Constructs the covariance matrix K using the kernel function."""
         x1_ = self.__data_checker(x1)
         x2_ = self.__data_checker(x2)
         K = np.array(
@@ -26,23 +36,28 @@ class GaussianProcess:
         return K
 
     def gp_sampling(self, x):
+        """Samples a function from the GP prior at points x."""
         K = self.create_kernel_mtx(x, x)
         L = np.linalg.cholesky(K)
         _x = np.random.normal(0, 1, len(x))
         return L @ _x
 
     def prediction(self, x):
+        """Calculates the posterior predictive distribution: p(y* | x*, X, y)."""
         mu = []
         var = []
 
+        # Training covariance matrix (Cn = K + beta^-1 * I)
         Cn = self.create_kernel_mtx(self.x_train, self.x_train)
         Cn_inv = np.linalg.inv(Cn)
 
+        # Covariance between training and test points
         k = self.create_kernel_mtx(self.x_train, x)
 
-        # Actuary only use diagonal matrix. It can be made faster.
+        # Predictive mean: mu = k^T * Cn^-1 * y
         c = self.create_kernel_mtx(x, x)
         mu = k.T @ Cn_inv @ self.y_train
+        # Predictive variance: var = c - k^T * Cn^-1 * k
         all_var = c - (k.T @ Cn_inv @ k)
         var = np.diag(all_var)
         return mu, var
@@ -57,22 +72,28 @@ class GaussianProcess:
         self.theta = _theta
 
     def optimize(self):
+        """Optimizes hyperparameters by maximizing the Log-Marginal Likelihood (LML)."""
+
         def __objective(_beta, _theta):
             self.set_parameters(_beta, _theta)
             Cn = self.create_kernel_mtx(self.x_train, self.x_train)
             Cn_inv = np.linalg.inv(Cn)
             partial_C = self.__partial_diff(self.x_train, self.x_train)
+
+            # Log-Marginal Likelihood: L = -0.5 * y^T * Cn^-1 * y - 0.5 * log|Cn| - n/2 * log(2pi)
             L = np.array(
                 -0.5 * np.linalg.slogdet(Cn)[1]
                 - 0.5 * self.y_train.T @ Cn_inv @ self.y_train
                 - 0.5 * len(self.x_train) * np.log(2 * np.pi)
             )
 
+            # Gradient with respect to beta
             dbeta = np.array(
-                -0.5 * np.trace(Cn_inv) / (_beta ** 2)
-                + 0.5 / (_beta ** 2) * (self.y_train.T @ Cn_inv @ Cn_inv @ self.y_train)
+                -0.5 * np.trace(Cn_inv) / (_beta**2)
+                + 0.5 / (_beta**2) * (self.y_train.T @ Cn_inv @ Cn_inv @ self.y_train)
             )
 
+            # Gradient with respect to theta: 0.5 * tr((alpha*alpha^T - Cn^-1) * dCn/dtheta)
             dtheta = np.array(
                 [
                     0.5 * np.trace(Cn_inv @ p_c)
@@ -108,6 +129,7 @@ class GaussianProcess:
         return x
 
     def __gaussian_kernel(self, x, x_prime, delta):
+        """Combined kernel: RBF + Constant + Linear + Noise."""
         return np.squeeze(
             self.theta[0]
             * np.exp(-self.theta[1] / 2 * np.linalg.norm(x - x_prime) ** 2)
@@ -117,6 +139,8 @@ class GaussianProcess:
         )
 
     def __partial_diff(self, x1, x2):
+        """Calculates the partial derivatives of the kernel matrix w.r.t. theta."""
+
         def f_dtheta0(x, x_prime):
             return np.exp(-self.theta[1] / 2 * np.linalg.norm(x - x_prime) ** 2)
 
