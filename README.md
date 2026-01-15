@@ -31,10 +31,10 @@ This version is optimized for performance and numerical stability:
 
 To demonstrate the performance difference between the standard and efficient implementations, the execution time for both 1D and 2D regression tasks was measured. As shown in the plots below, the efficient version (`GPR_efficient.py`) is significantly faster, especially as the number of data points increases.
 
-**1D Regression**
+**1D Regression**  
 ![Execution Time Comparison](./image/1d-execution-time.png)
 
-**2D Regression**
+**2D Regression**  
 ![Execution Time Comparison](./image/2d-execution-time.png)
 
 This performance gain is achieved through vectorized operations and the use of Cholesky decomposition, making the efficient version more suitable for larger datasets.
